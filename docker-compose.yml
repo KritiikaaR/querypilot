@@ -1,0 +1,37 @@
+# Run the whole app with one command:   docker compose up
+# Then open http://localhost:5173  (API docs: http://localhost:8000/docs)
+#
+# Edits to backend/app/ and frontend/src/ reload automatically, same as running
+# uvicorn and npm by hand. Rebuild (`docker compose up --build`) only after
+# changing requirements.txt, package.json, or the data in backend/data/.
+
+services:
+  backend:
+    build: ./backend
+    env_file: ./backend/.env            # your OPENAI_API_KEY lives here
+    environment:
+      WATCHFILES_FORCE_POLLING: "true"  # Windows/Mac file changes don't reach containers otherwise
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/app:/app/app          # live code; the pizza database stays baked into the image
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  frontend:
+    build: ./frontend
+    environment:
+      API_PROXY_TARGET: http://backend:8000   # containers reach each other by service name
+      VITE_POLL: "true"
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules                     # keep the container's own node_modules, not your Windows one
+    depends_on:
+      backend:
+        condition: service_healthy

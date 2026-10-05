@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+.env
+
+# Generated data (rebuilt by `python -m data.seed`)
+backend/data/*.db
+backend/evals/results/
+
+# Frontend
+node_modules/
+frontend/dist/
+frontend/.env*.local
+
+# OS / editor
+.DS_Store
+.vscode/
