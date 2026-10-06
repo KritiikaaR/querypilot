@@ -18,6 +18,20 @@ def test_schema_text_has_ddl_comments_and_samples(db):
     assert "sample rows" in text
 
 
+def test_schema_text_explains_pizza_means_type(db):
+    text = db.schema_text()
+    ddl = text.split("CREATE TABLE pizza_types")[1].split(");")[0]
+    assert "group by pizza_type_id" in ddl and "pizza_types.name" in ddl
+    assert "only when size matters" in ddl
+
+
+def test_schema_text_explains_closed_days(db):
+    text = db.schema_text()
+    ddl = text.split("CREATE TABLE orders")[1].split(");")[0]
+    assert "closed have no rows here" in ddl
+    assert "365 days" in ddl and "recursive CTE" in ddl
+
+
 def test_truncation_flag(db):
     r = db.run("SELECT order_id FROM orders", max_rows=10, timeout_ms=1000)
     assert len(r.rows) == 10 and r.truncated
