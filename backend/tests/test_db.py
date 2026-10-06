@@ -14,15 +14,8 @@ def test_schema_text_has_ddl_comments_and_samples(db):
     text = db.schema_text()
     for table in ["pizza_types", "pizzas", "orders", "order_details"]:
         assert f"CREATE TABLE {table}" in text
-    assert "quantity * pizzas.price" in text    # business rule lives in the DDL comment
+    assert "how many of this exact pizza" in text    # column notes live in the DDL comments
     assert "sample rows" in text
-
-
-def test_schema_text_explains_pizza_means_type(db):
-    text = db.schema_text()
-    ddl = text.split("CREATE TABLE pizza_types")[1].split(");")[0]
-    assert "group by pizza_type_id" in ddl and "pizza_types.name" in ddl
-    assert "only when size matters" in ddl
 
 
 def test_schema_text_explains_closed_days(db):

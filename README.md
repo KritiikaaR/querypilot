@@ -16,7 +16,7 @@ question ──► LLM writes SQL ──► guard (read-only? one statement? add
                  └──────────── error message fed back (up to 3 attempts) ◄───── error ───┘
 ```
 
-- **Schema-aware prompting.** The model gets each table's `CREATE TABLE` statement (including inline comments that explain business rules such as "revenue = quantity × price" and "price depends on size, so it lives in the pizzas table") and a few sample rows.
+- **Schema-aware prompting.** The model gets each table's `CREATE TABLE` statement (including inline comments that explain how the data works, such as "price depends on size, so it lives in the pizzas table") and a few sample rows, followed by a short business glossary (`backend/data/glossary.md`) that says what people mean by words like "pizza", "sold", and "revenue".
 - **Self-correction.** Syntax errors, unknown columns, and guard rejections go back to the model, which retries up to `MAX_ATTEMPTS` times. The UI shows every attempt.
 - **Answers in plain English.** After the query runs, a second small model call reads the result and writes a one or two sentence answer ("July was the best month at $72,557.90…"). The UI also formats raw values for people: `2015-07` becomes "Jul 2015", money gets a `$`, hour `12` becomes "12 PM". Turn it off with `SUMMARIZE=false`.
 - **Knows when to say no.** If the data can't answer the question (e.g. profit, when there is no cost data), the model returns `sql: null` and an explanation instead of making something up.
@@ -24,7 +24,7 @@ question ──► LLM writes SQL ──► guard (read-only? one statement? add
 
 ## Evaluation
 
-`backend/evals/questions.json` holds 30 questions (easy / medium / hard / unanswerable), each with a hand-written gold SQL query. The eval runs the agent on every question and checks **execution accuracy**: whether the agent's result set matches the gold result set, ignoring column names and order.
+`backend/evals/questions.json` holds 30 questions (easy / medium / hard / unanswerable), each with a hand-written gold SQL query. The eval runs the agent on every question and checks **execution accuracy**: whether the agent's result set matches the gold result set, ignoring column names and order. It reports two numbers: **strict** requires exactly the gold columns, while **lenient** also accepts answers that add extra columns (e.g. an id or a count next to the requested name).
 
 ```bash
 cd backend
@@ -45,9 +45,9 @@ docker compose run --rm backend python -m evals.run_eval --repeat 3
 
 Reports land in `backend/evals/results/` on your machine (docker-compose.yml mounts that folder).
 
-| Model | Execution accuracy | Self-corrected | p50 latency |
-|---|---|---|---|
-| gpt-4o-mini | _run the eval_ | | |
+| Model | Runs | Strict accuracy (mean, min–max) | Lenient accuracy (mean) | Self-corrected | p50 latency |
+|---|---|---|---|---|---|
+| gpt-4o-mini | 3 | _run the eval_ | | | |
 
 ## Run it locally
 
@@ -128,6 +128,7 @@ backend/
     prompts.py    system and retry prompts
   data/raw/       the original CSVs from Maven Analytics
   data/seed.py    loads the CSVs into SQLite, fixing dates, times, and encoding
+  data/glossary.md  business definitions added to the prompt
   evals/          questions, scoring, eval runner
   tests/          pytest suite
 frontend/

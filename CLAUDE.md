@@ -20,13 +20,15 @@ Text-to-SQL agent: FastAPI backend (backend/) + React/Vite frontend (frontend/).
 - After a successful query, if `summarize=True` (on in the app via SUMMARIZE env, off in tests and evals by default), `_add_answer` makes a second call with SUMMARY_PROMPT and the first 50 rows to fill `AgentResult.answer`. It is best effort: failures are logged and the result still returns.
 - `frontend/src/lib/format.js` turns raw values into readable ones (column names, months, dates, money, percents, hours). Table and chart both use it.
 - Schema docs live as `--` comments inside the CREATE TABLE statements in data/seed.py; SQLite keeps them and they go into the prompt. Comments outside CREATE TABLE are lost.
+- Business glossary: data/glossary.md, loaded by `load_glossary()` in app/agent.py and placed in SYSTEM_PROMPT as a "Business definitions" section right after the schema (GLOSSARY_SECTION in prompts.py). `<!-- -->` comments in it are stripped. A missing file logs a warning and the section is left out; the agent still works.
+- What goes where: schema comments = facts about columns and rows (formats, allowed values, what a row means, what is absent, SQLite how-tos like strftime). Glossary = what people's words mean in terms of the schema ("pizza" = pizza type, "sold" = SUM(quantity), "revenue"). Don't say the same thing in both. Changing the glossary needs no reseed, but the Docker image must be rebuilt (data/ is baked in).
 - Dataset "today" is 2015-12-31 (DATASET_TODAY in agent.py); all orders are in 2015.
 - The loader converts dates from dd/mm/yyyy to ISO, zero-pads times, and reads pizza_types.csv as cp1252. tests/test_db.py checks all three and that total revenue is 817860.05.
 
 ## Conventions
 - Every behavior change gets a pytest test; use FakeLLM to script model replies, never call the real API in tests.
 - If you change seed.py, rerun the seed and `pytest tests/test_evals.py` (every gold query must still return rows), and update hardcoded counts in tests.
-- Fix eval failures in the product (SYSTEM_PROMPT, schema comments), never by editing questions.json or gold_sql. Schema notes should be general facts about the data, not hints for specific questions.
+- Fix eval failures in the product (SYSTEM_PROMPT, schema comments, glossary), never by editing questions.json or gold_sql. Schema notes and glossary entries should be general, not hints for specific questions. Report strict and lenient accuracy as --repeat means.
 - Eval questions must have exactly one correct answer: say what to return ("by revenue", "and how many"), and check top-1 questions for ties.
 - Keep the guard and the read-only connection both in place; they are deliberate defense in depth.
 - Frontend: React Router with two pages, `/` (pages/Landing.jsx) and `/app` (pages/Workspace.jsx). Copy and suggested questions live in src/content.js. Question history is saved in localStorage (src/lib/history.js).
