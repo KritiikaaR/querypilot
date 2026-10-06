@@ -16,6 +16,7 @@ services:
       - "8000:8000"
     volumes:
       - ./backend/app:/app/app          # live code; the pizza database stays baked into the image
+      - ./backend/evals/results:/app/evals/results   # eval reports land on your machine
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
       interval: 5s

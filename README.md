@@ -31,9 +31,19 @@ cd backend
 python -m evals.run_eval                    # default model
 python -m evals.run_eval --model gpt-4o     # compare models
 python -m evals.run_eval --only h01,h07     # rerun specific questions
+python -m evals.run_eval --repeat 3         # run the set 3 times; report mean/min/max
 ```
 
-It prints accuracy overall and by difficulty, how many answers needed self-correction, p50/p95 latency, and token usage, then saves a full per-question report to `evals/results/`.
+It prints accuracy overall and by difficulty, how many answers needed self-correction, p50/p95 latency, token usage, and the ids of failed questions, then saves a full per-question report (including the model's SQL and its one-line explanation) to `evals/results/`. Model output varies between runs, so report the `--repeat` mean rather than a single run; with `--repeat N` it also lists each question that didn't pass every run (e.g. `m03: 2/3`).
+
+With Docker (from the repo root; rebuild first so the image has the current eval code and database):
+
+```bash
+docker compose build backend
+docker compose run --rm backend python -m evals.run_eval --repeat 3
+```
+
+Reports land in `backend/evals/results/` on your machine (docker-compose.yml mounts that folder).
 
 | Model | Execution accuracy | Self-corrected | p50 latency |
 |---|---|---|---|

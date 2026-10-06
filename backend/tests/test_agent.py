@@ -73,6 +73,15 @@ def test_schema_is_in_system_prompt(db, fake_llm):
     assert system["role"] == "system" and "CREATE TABLE order_details" in system["content"]
 
 
+def test_system_prompt_narrows_refusals(db, fake_llm):
+    llm = fake_llm([{"sql": "SELECT 1", "explanation": ""}])
+    make_agent(db, llm).ask("x")
+    system = llm.calls[0][0]["content"]
+    assert 'Set "sql" to null only when the question needs information that no column holds' in system
+    assert "always write the query" in system
+    assert "cannot be answered from this data" not in system  # the old, broader rule is gone
+
+
 @pytest.mark.parametrize("text,sql", [
     ('{"sql": "SELECT 1", "explanation": "e"}', "SELECT 1"),
     ('```json\n{"sql": "SELECT 1", "explanation": "e"}\n```', "SELECT 1"),
