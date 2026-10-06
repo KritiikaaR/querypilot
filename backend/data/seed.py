@@ -34,6 +34,8 @@ CREATE TABLE pizza_types (
     -- Every pizza includes Mozzarella Cheese even if it isn't listed, and Tomato Sauce
     -- unless another sauce is listed. To find pizzas with an ingredient, use
     -- ingredients LIKE '%Garlic%' (matching is case-insensitive for ASCII in SQLite).
+    -- "Pizza" without a size means the pizza type: group by pizza_type_id and show
+    -- pizza_types.name. Use pizzas.pizza_id (type + size) only when size matters.
 );
 
 CREATE TABLE pizzas (
@@ -50,6 +52,8 @@ CREATE TABLE orders (
     time TEXT NOT NULL                -- 24-hour 'HH:MM:SS' when the order was placed
     -- Hour of day: CAST(strftime('%H', time) AS INTEGER).
     -- Day of week: strftime('%w', date) where 0 = Sunday ... 6 = Saturday.
+    -- Days the shop was closed have no rows here. To count or list days with no orders,
+    -- compare against the calendar (2015 has 365 days) or generate dates with a recursive CTE.
 );
 
 CREATE TABLE order_details (
