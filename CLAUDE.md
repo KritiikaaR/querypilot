@@ -7,9 +7,10 @@ Text-to-SQL agent: FastAPI backend (backend/) + React/Vite frontend (frontend/).
 - Build demo DB: `python -m data.seed` (loads data/raw/*.csv, the Maven Analytics Pizza Place Sales dataset, into data/shop.db)
 - Run API: `uvicorn app.main:app --reload` (port 8000, docs at /docs)
 - Tests: `pytest -q` (no API key needed; tests use FakeLLM from tests/conftest.py)
-- Eval: `python -m evals.run_eval [--model gpt-4o] [--only id1,id2]` (needs OPENAI_API_KEY; costs tokens)
+- Eval: `python -m evals.run_eval [--model gpt-4o] [--only id1,id2] [--repeat N]` (needs OPENAI_API_KEY; costs tokens). Reports go to evals/results/ and include each answer's explanation; --repeat N aggregates mean/min/max accuracy and per-question pass counts. Scoring/summary logic is in run_once / summarize_run / summarize_repeats (tested in tests/test_run_eval.py).
+- Eval in Docker: `docker compose build backend && docker compose run --rm backend python -m evals.run_eval --repeat 3`. Only backend/app and backend/evals/results are mounted, so rebuild after changing eval code or seed.py.
 - Frontend: `cd frontend && npm install && npm run dev` (port 5173, proxies /api to 8000)
-- Both at once: `docker compose up` from the repo root (needs backend/.env). Backend mounts ./backend/app with uvicorn --reload; frontend mounts ./frontend with Vite polling. vite.config.js reads API_PROXY_TARGET (http://backend:8000 in compose). Rebuild with --build after dependency or data changes.
+- Both at once: `docker compose up` from the repo root (needs backend/.env). Backend mounts ./backend/app with uvicorn --reload, and ./backend/evals/results so eval reports reach the host; frontend mounts ./frontend with Vite polling. vite.config.js reads API_PROXY_TARGET (http://backend:8000 in compose). Rebuild with --build after dependency or data changes.
 
 ## Architecture
 - `app/agent.py` TextToSQLAgent.ask(): build prompt with schema → LLM → parse JSON → guard → db.run → on GuardError/QueryError/LLMOutputError append error and retry, up to max_attempts. Returns AgentResult (status ok | unanswerable | failed).
@@ -25,6 +26,7 @@ Text-to-SQL agent: FastAPI backend (backend/) + React/Vite frontend (frontend/).
 ## Conventions
 - Every behavior change gets a pytest test; use FakeLLM to script model replies, never call the real API in tests.
 - If you change seed.py, rerun the seed and `pytest tests/test_evals.py` (every gold query must still return rows), and update hardcoded counts in tests.
+- Fix eval failures in the product (SYSTEM_PROMPT, schema comments), never by editing questions.json or gold_sql. Schema notes should be general facts about the data, not hints for specific questions.
 - Eval questions must have exactly one correct answer: say what to return ("by revenue", "and how many"), and check top-1 questions for ties.
 - Keep the guard and the read-only connection both in place; they are deliberate defense in depth.
 - Frontend: React Router with two pages, `/` (pages/Landing.jsx) and `/app` (pages/Workspace.jsx). Copy and suggested questions live in src/content.js. Question history is saved in localStorage (src/lib/history.js).
