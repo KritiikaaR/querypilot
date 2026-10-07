@@ -2,7 +2,7 @@ import logging
 import os
 from functools import lru_cache
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -10,6 +10,7 @@ from .agent import TextToSQLAgent
 from .config import settings
 from .db import Database
 from .llm import OpenAIClient
+from .ratelimit import DailyBudget, RateLimiter, client_ip, seconds_until_utc_midnight
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("querypilot")
@@ -49,6 +50,22 @@ def _build_agent() -> TextToSQLAgent:
     )
 
 
+# Shown to users as-is by the frontend.
+TOO_MANY_PER_MINUTE = "You're asking a lot of questions! Try again in a minute."
+TOO_MANY_TODAY = "You've asked a lot of questions today. Try again tomorrow."
+BUDGET_SPENT = "The demo hit its daily limit. Try again tomorrow."
+
+
+@lru_cache
+def get_rate_limiter() -> RateLimiter:
+    return RateLimiter(per_minute=settings.rate_limit_per_minute, per_day=settings.rate_limit_per_day)
+
+
+@lru_cache
+def get_budget() -> DailyBudget:
+    return DailyBudget(limit_usd=settings.daily_budget_usd)
+
+
 def get_agent() -> TextToSQLAgent:
     if not os.getenv("OPENAI_API_KEY"):
         raise HTTPException(status_code=503, detail="OPENAI_API_KEY is not set on the server.")
@@ -75,12 +92,26 @@ def examples():
 
 
 @app.post("/api/query")
-def query(req: QueryRequest, agent: TextToSQLAgent = Depends(get_agent)):
+def query(req: QueryRequest, request: Request,
+          agent: TextToSQLAgent = Depends(get_agent),
+          limiter: RateLimiter = Depends(get_rate_limiter),
+          budget: DailyBudget = Depends(get_budget)):
+    if budget.exhausted():
+        raise HTTPException(status_code=503, detail=BUDGET_SPENT,
+                            headers={"Retry-After": str(seconds_until_utc_midnight(budget.clock()))})
+    ip = client_ip(request.headers, request.client.host if request.client else None, settings.trust_proxy)
+    hit = limiter.check(ip)
+    if hit:
+        log.info("rate limited ip=%s limit=%s", ip, hit)
+        raise HTTPException(status_code=429, detail=TOO_MANY_PER_MINUTE if hit == "minute" else TOO_MANY_TODAY,
+                            headers={"Retry-After": "60" if hit == "minute"
+                                     else str(seconds_until_utc_midnight(limiter.clock()))})
     try:
         result = agent.ask(req.question.strip())
     except Exception as e:  # LLM/network failures: log the detail, return a clean error
         log.exception("query failed")
         raise HTTPException(status_code=502, detail=f"Upstream model error: {type(e).__name__}") from e
+    budget.charge(result.input_tokens, result.output_tokens)
     log.info("q=%r status=%s attempts=%d tokens=%d/%d total_ms=%.0f",
              result.question, result.status, len(result.attempts),
              result.input_tokens, result.output_tokens, result.total_ms)
