@@ -1,7 +1,8 @@
 import { useState } from "react";
 
-// A real question/answer pair from the pizza data. Each highlighted phrase in the
-// question is linked (same color) to the part of the SQL that implements it.
+// A real question/answer pair from the pizza data, laid out like the app: what you
+// type, the SQL it wrote (small, a peek under the hood), and what comes back. Each
+// highlighted phrase in the question is linked (same color) to the SQL that implements it.
 const LINKS = {
   top: { color: "amber", label: "5 best-selling" },
   revenue: { color: "blue", label: "revenue" },
@@ -26,7 +27,7 @@ const SQL = [
   [["SELECT "], ["pt.name AS pizza", "products"], [","]],
   [["       ROUND("], ["SUM(od.quantity * p.price)", "revenue"], [", 2) AS revenue"]],
   [["FROM order_details od"]],
-  [["JOIN pizzas p ON p.pizza_id = od.pizza_id", "rule"]],
+  [["JOIN pizzas p ON p.pizza_id = od.pizza_id"]],
   [["JOIN pizza_types pt ON pt.pizza_type_id = p.pizza_type_id", "products"]],
   [["JOIN orders o ON o.order_id = od.order_id"]],
   [["WHERE "], ["strftime('%m', o.date) = '07'", "year"]],
@@ -34,6 +35,8 @@ const SQL = [
   [["ORDER BY revenue DESC", "top"]],
   [["LIMIT 5", "top"], [";"]],
 ];
+
+const ANSWER = "The Thai Chicken Pizza was July's top seller at $4,073.75.";
 
 const RESULT = [
   ["The Thai Chicken Pizza", 4073.75],
@@ -48,14 +51,6 @@ export default function HeroDemo() {
 
   const mark = (text, link, key) => {
     if (!link) return <span key={key}>{text}</span>;
-    if (link === "rule") {
-      return (
-        <span key={key} className={`hl hl-rule ${active === "rule" ? "is-on" : ""} ${active && active !== "rule" ? "is-dim" : ""}`}
-              onMouseEnter={() => setActive("rule")} onMouseLeave={() => setActive(null)}>
-          {text}
-        </span>
-      );
-    }
     const { color } = LINKS[link];
     const cls = ["hl", `hl-${color}`, `hl-seq-${ORDER.indexOf(link)}`,
       active === link ? "is-on" : "", active && active !== link ? "is-dim" : ""].join(" ");
@@ -68,7 +63,7 @@ export default function HeroDemo() {
 
   return (
     <figure className="demo" aria-label="Example: a question, the SQL QueryPilot wrote for it, and the answer">
-      <div className="demo-q">
+      <div className="demo-ask">
         <p className="demo-question">
           {QUESTION.map(([t, link], i) =>
             link ? (
@@ -82,7 +77,12 @@ export default function HeroDemo() {
             )
           )}
         </p>
+        <span className="demo-send" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 13V3M3.5 7.5 8 3l4.5 4.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        </span>
       </div>
+
+      <div className="demo-flow" aria-hidden="true" />
 
       <pre className="demo-sql" aria-label="Generated SQL">
         {SQL.map((line, i) => (
@@ -93,25 +93,24 @@ export default function HeroDemo() {
         ))}
       </pre>
 
-      <p className="demo-note">
-        {active === "rule"
-          ? "This join isn't in the question. A pizza's price depends on its size, and the schema notes say prices live in the pizzas table."
-          : "Hover a highlighted phrase to see the SQL that answers it. The dotted line comes from notes about how the data works."}
-      </p>
+      <div className="demo-flow" aria-hidden="true" />
 
-      <table className="demo-result">
-        <thead>
-          <tr><th>pizza</th><th className="num">revenue</th></tr>
-        </thead>
-        <tbody>
-          {RESULT.map(([name, rev]) => (
-            <tr key={name}>
-              <td>{name}</td>
-              <td className="num">${rev.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="demo-out">
+        <p className="demo-answer">{ANSWER}</p>
+        <table className="demo-result">
+          <thead>
+            <tr><th>pizza</th><th className="num">revenue</th></tr>
+          </thead>
+          <tbody>
+            {RESULT.map(([name, rev]) => (
+              <tr key={name}>
+                <td>{name}</td>
+                <td className="num">${rev.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </figure>
   );
 }
