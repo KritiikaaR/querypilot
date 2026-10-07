@@ -3,11 +3,9 @@
 export const GITHUB_REPO = "https://github.com/KritiikaaR/querypilot";
 export const GITHUB_PROFILE = "https://github.com/KritiikaaR";
 
-// Fill this in after running `python -m evals.run_eval` in backend/.
-// While it's null, the landing page describes the test set without numbers.
-export const EVAL_RESULTS = null;
-// Example once you have it:
-// export const EVAL_RESULTS = { model: "gpt-4o-mini", accuracy: 90.0, selfCorrected: 3, questions: 30 };
+// From `python -m evals.run_eval --repeat 3` in backend/ (accuracy = mean strict execution accuracy).
+// Set to null to have the landing page describe the test set without numbers.
+export const EVAL_RESULTS = { model: "gpt-4o-mini", accuracy: 96.7, selfCorrected: 0, questions: 30, runs: 3 };
 
 export const DATA_SOURCE = "https://mavenanalytics.io/data-playground/pizza-place-sales";
 
