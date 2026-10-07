@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { askQuestion, getSchema } from "../api.js";
 import Logo from "../components/Logo.jsx";
 import ResultView from "../components/ResultView.jsx";
-import { SUGGESTIONS, TABLE_NOTES } from "../content.js";
+import { SUGGESTIONS } from "../content.js";
 import { loadHistory, newId, saveHistory } from "../lib/history.js";
 
 export default function Workspace() {
@@ -63,6 +63,32 @@ export default function Workspace() {
 
   const showEmpty = !active && !pending && !error;
 
+  // One ask box: centered on the empty screen, in the top bar everywhere else.
+  const askForm = (
+    <form
+      className="ask"
+      onSubmit={(e) => {
+        e.preventDefault();
+        ask();
+      }}
+    >
+      <label htmlFor="q" className="sr-only">Ask a question about the pizza shop</label>
+      <input
+        id="q"
+        ref={inputRef}
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        placeholder="Ask about orders or pizzas"
+        maxLength={500}
+        autoComplete="off"
+        autoFocus
+      />
+      <button type="submit" className="btn" disabled={!!pending || input.trim().length < 3}>
+        {pending ? "Asking…" : "Ask"}
+      </button>
+    </form>
+  );
+
   return (
     <div className="ws">
       <aside className={`ws-side ${menuOpen ? "is-open" : ""}`} aria-label="Your questions">
@@ -76,7 +102,7 @@ export default function Workspace() {
         <div className="ws-history">
           <h2 className="ws-side-title">Your questions</h2>
           {history.length === 0 ? (
-            <p className="ws-side-empty">Questions you ask show up here, so you can come back to them.</p>
+            <p className="ws-side-empty">Questions you ask show up here.</p>
           ) : (
             <ul>
               {history.map((h) => (
@@ -92,8 +118,11 @@ export default function Workspace() {
           )}
         </div>
 
-        <details className="ws-data">
-          <summary>Pizza shop data</summary>
+        <details
+          className="ws-data"
+          onToggle={(e) => e.currentTarget.open && e.currentTarget.scrollIntoView({ block: "end", behavior: "smooth" })}
+        >
+          <summary>About the data</summary>
           <ul>
             {tables.map((t) => (
               <li key={t.name}>
@@ -108,35 +137,14 @@ export default function Workspace() {
       {menuOpen && <div className="ws-scrim" onClick={() => setMenuOpen(false)} aria-hidden="true" />}
 
       <main className="ws-main">
-        <div className="ws-topbar">
+        <div className={`ws-topbar ${showEmpty ? "is-bare" : ""}`}>
           <button className="icon-btn ws-menu" onClick={() => setMenuOpen(true)} aria-label="Open your questions">
             <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M2 4h14M2 9h14M2 14h14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>
           </button>
-          <form
-            className="ask"
-            onSubmit={(e) => {
-              e.preventDefault();
-              ask();
-            }}
-          >
-            <label htmlFor="q" className="sr-only">Ask a question about the pizza shop</label>
-            <input
-              id="q"
-              ref={inputRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask about orders, pizzas, sizes, prices, or ingredients"
-              maxLength={500}
-              autoComplete="off"
-              autoFocus
-            />
-            <button type="submit" className="btn" disabled={!!pending || input.trim().length < 3}>
-              {pending ? "Asking…" : "Ask"}
-            </button>
-          </form>
+          {!showEmpty && askForm}
         </div>
 
-        <div className="ws-body">
+        <div className={`ws-body ${showEmpty ? "is-home" : ""}`}>
           {pending && (
             <div className="ws-pending" role="status">
               <h1 className="result-title">{pending}</h1>
@@ -160,30 +168,17 @@ export default function Workspace() {
           )}
 
           {showEmpty && (
-            <div className="ws-empty">
-              <h1>What do you want to know about the pizza shop?</h1>
-              <p className="ws-empty-sub">
-                Type a question above, or start with one of these. You'll get the answer and the SQL that produced it.
-              </p>
-              <div className="suggest">
-                {SUGGESTIONS.map((group) => (
-                  <section key={group.topic}>
-                    <h2>{group.topic}</h2>
-                    <ul>
-                      {group.questions.map((q) => (
-                        <li key={q}>
-                          <button className="suggest-q" onClick={() => ask(q)}>{q}</button>
-                        </li>
-                      ))}
-                    </ul>
-                  </section>
+            <div className="ws-home">
+              <h1>What do you want to know?</h1>
+              {askForm}
+              <ul className="chips" aria-label="Example questions">
+                {SUGGESTIONS.map((q) => (
+                  <li key={q}>
+                    <button className="chip" onClick={() => ask(q)}>{q}</button>
+                  </li>
                 ))}
-              </div>
-              <p className="ws-empty-foot">
-                The data covers every order from 2015 in {Object.keys(TABLE_NOTES).length} tables: orders, the pizzas in
-                each order, the menu with sizes and prices, and pizza types with their ingredients. There's no customer,
-                delivery, or cost data, so it can't answer questions about those.
-              </p>
+              </ul>
+              <p className="ws-home-note">2015 sales from one pizza shop</p>
             </div>
           )}
         </div>

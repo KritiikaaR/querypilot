@@ -11,31 +11,12 @@ export const EVAL_RESULTS = null;
 
 export const DATA_SOURCE = "https://mavenanalytics.io/data-playground/pizza-place-sales";
 
+// Example questions shown as chips on the app's empty screen. Clicking one asks it.
 export const SUGGESTIONS = [
-  {
-    topic: "Sales",
-    questions: [
-      "What were the 5 best-selling pizzas by revenue in July?",
-      "What was the total revenue each month?",
-      "How much revenue did each pizza size bring in?",
-    ],
-  },
-  {
-    topic: "When people order",
-    questions: [
-      "What hour of the day gets the most orders?",
-      "Which day of the week is busiest?",
-      "On which date were the most pizzas sold?",
-    ],
-  },
-  {
-    topic: "The menu",
-    questions: [
-      "Which pizzas contain mushrooms?",
-      "Which pizza brought in the least revenue?",
-      "What is the average order value?",
-    ],
-  },
+  "What hour gets the most orders?",
+  "Best-selling pizzas in July?",
+  "Which day sold the most pizzas?",
+  "Which pizzas have mushrooms?",
 ];
 
 export const TABLE_NOTES = {
