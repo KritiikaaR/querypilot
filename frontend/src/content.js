@@ -16,10 +16,3 @@ export const SUGGESTIONS = [
   "Which day sold the most pizzas?",
   "Which pizzas have mushrooms?",
 ];
-
-export const TABLE_NOTES = {
-  orders: "When each order was placed: date and time",
-  order_details: "Which pizzas were in each order, and how many",
-  pizzas: "Every menu item: a pizza type in one size, with its price",
-  pizza_types: "Pizza names, category, and ingredients",
-};
