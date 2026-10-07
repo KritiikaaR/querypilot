@@ -15,7 +15,8 @@ The raw CSVs in data/raw/ are loaded as-is, with three fixes:
 
 The CREATE TABLE statements keep their -- comments on purpose: SQLite stores the
 original DDL text, and the agent shows it to the LLM as schema documentation.
-The column notes come from the dataset's own data_dictionary.csv.
+The column notes come from the dataset's own data_dictionary.csv. Definitions of
+business terms ("revenue", "pizzas sold", what "pizza" means) live in data/glossary.md.
 """
 import csv
 import sqlite3
@@ -34,8 +35,6 @@ CREATE TABLE pizza_types (
     -- Every pizza includes Mozzarella Cheese even if it isn't listed, and Tomato Sauce
     -- unless another sauce is listed. To find pizzas with an ingredient, use
     -- ingredients LIKE '%Garlic%' (matching is case-insensitive for ASCII in SQLite).
-    -- "Pizza" without a size means the pizza type: group by pizza_type_id and show
-    -- pizza_types.name. Use pizzas.pizza_id (type + size) only when size matters.
 );
 
 CREATE TABLE pizzas (
@@ -61,8 +60,6 @@ CREATE TABLE order_details (
     order_id INTEGER NOT NULL REFERENCES orders(order_id),
     pizza_id TEXT NOT NULL REFERENCES pizzas(pizza_id),
     quantity INTEGER NOT NULL         -- how many of this exact pizza (type + size) in the order
-    -- Pizzas sold = SUM(quantity), not COUNT(*).
-    -- Revenue = SUM(order_details.quantity * pizzas.price).
 );
 """
 

@@ -35,6 +35,13 @@ def test_query_endpoint(client, db, fake_llm):
     assert body["status"] == "ok" and body["rows"] == [[96]] and body["sql"].startswith("SELECT")
 
 
+def test_query_endpoint_works_without_glossary(client, db, fake_llm, tmp_path):
+    llm = fake_llm([{"sql": "SELECT COUNT(*) AS n FROM pizzas", "explanation": "Counts menu items."}])
+    app.dependency_overrides[get_agent] = lambda: TextToSQLAgent(db, llm, glossary_path=tmp_path / "missing.md")
+    body = client.post("/api/query", json={"question": "How many menu items?"}).json()
+    assert body["status"] == "ok" and body["rows"] == [[96]]
+
+
 def test_query_validates_input(client, db, fake_llm):
     use_llm(db, fake_llm([]))
     assert client.post("/api/query", json={"question": ""}).status_code == 422
