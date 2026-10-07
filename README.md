@@ -42,6 +42,8 @@ The model writes SQL, so it shouldn't be able to break anything. Several layers 
 - **Timeout.** Queries are stopped after 3 seconds.
 - **Row cap.** Results are capped at 200 rows, and the app tells you when it cut some off.
 
+To keep the public demo cheap, `/api/query` is also rate limited: 10 questions a minute and 60 a day per IP, plus a global daily budget (`DAILY_BUDGET_USD`, default $1.00, estimated from token usage). Set `TRUST_PROXY=true` when running behind a proxy so limits apply to the real client IP.
+
 ## Run it locally
 
 **With Docker** (needs Docker Desktop running)

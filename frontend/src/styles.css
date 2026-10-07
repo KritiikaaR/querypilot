@@ -224,6 +224,7 @@ button.hl { cursor: default; }
 @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 3s; } }
 
 .ws-error p { margin-top: 12px; color: var(--bad); }
+.ws-error .ws-limit { margin-top: 14px; font-size: 17px; line-height: 1.5; color: var(--ink); padding-left: 14px; border-left: 3px solid var(--line-strong); max-width: 62ch; }
 
 .result-title { font-size: 26px; letter-spacing: -0.02em; max-width: 40ch; }
 .result-expl { margin-top: 10px; color: var(--ink-2); font-size: 16.5px; max-width: 70ch; }
