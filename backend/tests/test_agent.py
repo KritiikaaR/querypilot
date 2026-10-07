@@ -1,4 +1,4 @@
-from app.agent import TextToSQLAgent
+from app.agent import TextToSQLAgent, load_glossary
 from app.llm import LLMOutputError, parse_llm_json
 
 import pytest
@@ -145,3 +145,44 @@ def test_summary_only_sees_first_rows(db, fake_llm):
     make_agent(db, llm, summarize=True).ask("List orders")
     prompt = llm.calls[1][-1]["content"]
     assert "cut off" in prompt and prompt.count("\n") < TextToSQLAgent.SUMMARY_ROWS + 10
+
+
+def system_prompt(db, fake_llm, **kw) -> str:
+    llm = fake_llm([{"sql": "SELECT 1", "explanation": ""}])
+    TextToSQLAgent(db, llm, max_rows=50, timeout_ms=1000, **kw).ask("x")
+    return llm.calls[0][0]["content"]
+
+
+def test_system_prompt_has_single_number_names_and_helper_data_rules(db, fake_llm):
+    system = system_prompt(db, fake_llm)
+    assert "asks for a single number (how many, total, average, percentage), the query must return exactly" in system
+    assert "group in a subquery and aggregate outside it" in system
+    assert "Show human-readable names instead of ID codes unless the user asks for IDs." in system
+    assert "Helper data you can generate in SQL" in system and "is never a reason to refuse" in system
+
+
+def test_glossary_file_loads_without_comments():
+    text = load_glossary()
+    assert text.startswith("- ")
+    assert "group by pizza_types.pizza_type_id and show pizza_types.name".lower() in text.lower()
+    assert "SUM(order_details.quantity)" in text
+    assert "SUM(order_details.quantity * pizzas.price)" in text
+    assert "no rows in orders" in text
+    assert "<!--" not in text and "belong in the" not in text  # maintainer notes are stripped
+
+
+def test_glossary_is_its_own_section_right_after_schema(db, fake_llm):
+    system = system_prompt(db, fake_llm)
+    schema_end = system.rindex("-- sample rows")
+    section = system.index("Business definitions")
+    assert schema_end < section < system.index("Rules:")
+    assert load_glossary() in system[section:system.index("Rules:")]
+
+
+def test_missing_glossary_is_skipped(db, fake_llm, tmp_path):
+    missing = tmp_path / "nope.md"
+    assert load_glossary(missing) == ""
+    llm = fake_llm([{"sql": "SELECT COUNT(*) AS n FROM pizza_types", "explanation": "x"}])
+    res = TextToSQLAgent(db, llm, glossary_path=missing).ask("How many pizza types?")
+    assert res.status == "ok" and res.rows == [[32]]
+    assert "Business definitions" not in llm.calls[0][0]["content"]
