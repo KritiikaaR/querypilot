@@ -158,7 +158,8 @@ export default function Landing() {
             <div className="eval">
               <p className="eval-big">{EVAL_RESULTS.accuracy}%</p>
               <p className="eval-label">
-                of {EVAL_RESULTS.questions} questions answered correctly with {EVAL_RESULTS.model}.{" "}
+                {`of ${EVAL_RESULTS.questions} questions answered correctly with ${EVAL_RESULTS.model}`}
+                {EVAL_RESULTS.runs > 1 ? `, averaged over ${EVAL_RESULTS.runs} runs.` : "."}{" "}
                 {EVAL_RESULTS.selfCorrected > 0 && `${EVAL_RESULTS.selfCorrected} needed a second try.`}
               </p>
             </div>
