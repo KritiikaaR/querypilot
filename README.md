@@ -2,7 +2,7 @@
 
 Ask questions about a pizza shop's 2015 sales in plain English and get back the answer, the SQL that found it, and the result as a table (or a bar chart when that fits).
 
-Live demo: coming soon
+Live demo: https://querypilot-smoky.vercel.app/
 
 ![Landing page](docs/screenshots/landing.png)
 
