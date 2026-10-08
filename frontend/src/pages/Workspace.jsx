@@ -10,7 +10,7 @@ export default function Workspace() {
   const [activeId, setActiveId] = useState(null);
   const [input, setInput] = useState("");
   const [pending, setPending] = useState(null); // question currently being answered
-  const [error, setError] = useState(null); // { question, message }
+  const [error, setError] = useState(null); // { question, message, status }
   const [tables, setTables] = useState([]);
   const [menuOpen, setMenuOpen] = useState(false);
   const inputRef = useRef(null);
@@ -36,7 +36,7 @@ export default function Workspace() {
       setActiveId(item.id);
       setInput("");
     } catch (e) {
-      setError({ question, message: e.message });
+      setError({ question, message: e.message, status: e.status });
     } finally {
       setPending(null);
     }
@@ -155,9 +155,15 @@ export default function Workspace() {
           {error && !pending && (
             <div className="ws-error" role="alert">
               <h1 className="result-title">{error.question}</h1>
-              <p>QueryPilot couldn't reach the server: {error.message}</p>
+              {error.status === 429 || error.status === 503 ? (
+                <p className="ws-limit">{error.message}</p>
+              ) : error.status ? (
+                <p>Something went wrong on the server: {error.message}</p>
+              ) : (
+                <p>QueryPilot couldn't reach the server: {error.message}</p>
+              )}
               <div className="row-actions">
-                <button className="btn" onClick={() => ask(error.question)}>Try again</button>
+                {error.status !== 503 && <button className="btn" onClick={() => ask(error.question)}>Try again</button>}
                 <button className="btn btn-ghost" onClick={() => startNew(error.question)}>Edit question</button>
               </div>
             </div>

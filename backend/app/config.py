@@ -17,6 +17,10 @@ class Settings:
     max_rows: int = int(os.getenv("MAX_ROWS", "200"))              # rows returned to the client
     query_timeout_ms: int = int(os.getenv("QUERY_TIMEOUT_MS", "3000"))
     summarize: bool = os.getenv("SUMMARIZE", "true").lower() in ("1", "true", "yes")  # plain-English answer
+    rate_limit_per_minute: int = int(os.getenv("RATE_LIMIT_PER_MINUTE", "10"))  # per IP, POST /api/query
+    rate_limit_per_day: int = int(os.getenv("RATE_LIMIT_PER_DAY", "60"))        # per IP, per UTC day
+    daily_budget_usd: float = float(os.getenv("DAILY_BUDGET_USD", "1.00"))      # estimated model spend, all users
+    trust_proxy: bool = os.getenv("TRUST_PROXY", "false").lower() in ("1", "true", "yes")  # use X-Forwarded-For
     cors_origins: tuple = tuple(
         o.strip() for o in os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",") if o.strip()
     )

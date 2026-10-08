@@ -18,10 +18,14 @@ class LLMClient(Protocol):
 
 
 class OpenAIClient:
+    TIMEOUT_S = 20    # per request; a slow model call fails fast instead of hanging the user
+    MAX_RETRIES = 1   # the SDK retries transient errors (429/5xx/timeouts) once
+
     def __init__(self, model: str):
         from openai import OpenAI  # imported lazily so tests don't need a key
 
-        self.client = OpenAI()  # reads OPENAI_API_KEY from the environment
+        # Reads OPENAI_API_KEY from the environment.
+        self.client = OpenAI(timeout=self.TIMEOUT_S, max_retries=self.MAX_RETRIES)
         self.model = model
 
     def complete(self, messages: list[dict], json: bool = True) -> LLMResponse:
