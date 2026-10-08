@@ -1,9 +1,13 @@
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
+import { warmUp } from "../api.js";
 import HeroDemo from "../components/HeroDemo.jsx";
 import Logo from "../components/Logo.jsx";
 import { DATA_SOURCE, EVAL_RESULTS, GITHUB_PROFILE, GITHUB_REPO } from "../content.js";
 
 export default function Landing() {
+  useEffect(() => warmUp(), []);
+
   const facts = [
     "Read-only, so it can't change your data",
     EVAL_RESULTS &&

@@ -219,6 +219,7 @@ button.hl { cursor: default; }
 .ws-home-note { margin-top: 28px; font-size: 13.5px; color: var(--muted); }
 
 .ws-pending .pending-line { margin-top: 14px; display: flex; align-items: center; gap: 10px; color: var(--muted); }
+.ws-pending .pending-slow { margin-top: 6px; padding-left: 26px; font-size: 14px; color: var(--muted); }  /* lines up with the text after the spinner */
 .spinner { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--line-strong); border-top-color: var(--ink); animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 3s; } }
