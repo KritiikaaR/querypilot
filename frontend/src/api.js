@@ -13,7 +13,9 @@ async function request(path, options = {}) {
     } catch {
       /* non-JSON error body */
     }
-    throw new Error(detail);
+    const err = new Error(detail);
+    err.status = res.status; // 429/503 carry a message meant to be shown to the user as-is
+    throw err;
   }
   return res.json();
 }

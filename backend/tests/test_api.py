@@ -2,12 +2,16 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.agent import TextToSQLAgent
-from app.main import app, get_agent, get_db
+from app.main import app, get_agent, get_budget, get_db, get_rate_limiter
+from app.ratelimit import DailyBudget, RateLimiter
 
 
 @pytest.fixture
 def client(db):
     app.dependency_overrides[get_db] = lambda: db
+    limiter, budget = RateLimiter(), DailyBudget()  # fresh limits per test
+    app.dependency_overrides[get_rate_limiter] = lambda: limiter
+    app.dependency_overrides[get_budget] = lambda: budget
     yield TestClient(app)
     app.dependency_overrides.clear()
 
