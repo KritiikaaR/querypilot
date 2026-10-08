@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { askQuestion, getSchema } from "../api.js";
+import { askQuestion, getSchema, warmUp } from "../api.js";
 import Logo from "../components/Logo.jsx";
 import ResultView from "../components/ResultView.jsx";
 import { SUGGESTIONS } from "../content.js";
@@ -13,12 +13,20 @@ export default function Workspace() {
   const [error, setError] = useState(null); // { question, message, status }
   const [tables, setTables] = useState([]);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [slow, setSlow] = useState(false); // pending for over 5 s: probably a cold server
   const inputRef = useRef(null);
 
   useEffect(() => saveHistory(history), [history]);
   useEffect(() => {
+    warmUp();
     getSchema().then((d) => setTables(d.tables)).catch(() => {});
   }, []);
+  useEffect(() => {
+    setSlow(false);
+    if (!pending) return;
+    const t = setTimeout(() => setSlow(true), 5000);
+    return () => clearTimeout(t);
+  }, [pending]);
 
   const active = history.find((h) => h.id === activeId) || null;
 
@@ -149,6 +157,7 @@ export default function Workspace() {
             <div className="ws-pending" role="status">
               <h1 className="result-title">{pending}</h1>
               <p className="pending-line"><span className="spinner" aria-hidden="true" /> Writing the SQL and running it. This usually takes a few seconds.</p>
+              {slow && <p className="pending-slow">Waking up the server. The first question can take about 30 seconds.</p>}
             </div>
           )}
 

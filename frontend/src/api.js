@@ -20,6 +20,12 @@ async function request(path, options = {}) {
   return res.json();
 }
 
+// The hosted backend sleeps when idle and takes 30-60 s to wake. Pinging it as soon as a
+// page loads starts that early. Fire and forget: the result and any error are ignored.
+export function warmUp() {
+  fetch(`${BASE}/api/health`).catch(() => {});
+}
+
 export const getExamples = () => request("/api/examples");
 export const getSchema = () => request("/api/schema");
 export const askQuestion = (question) =>
