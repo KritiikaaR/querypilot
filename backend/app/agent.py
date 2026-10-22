@@ -59,12 +59,17 @@ class AgentResult:
 
 
 def format_result(result: AgentResult, max_rows: int) -> str:
-    """The result as the answer writer sees it: a header line and the first max_rows rows.
-    The faithfulness eval gives its judge this same text, so both see the same evidence."""
+    """The result as the answer writer sees it: a header line and the first max_rows rows."""
     shown = result.rows[:max_rows]
     table = "\n".join([" | ".join(result.columns)] + [" | ".join(str(v) for v in r) for r in shown])
     cut = ", cut off" if result.truncated or len(result.rows) > len(shown) else ""
     return f"Result ({len(shown)} rows{cut}):\n{table or '(no rows)'}"
+
+
+def summary_input(result: AgentResult, max_rows: int) -> str:
+    """Everything the answer writer is shown: the question and the result. The faithfulness eval
+    gives its judge this same text; a bare "32" only means "32 pizza types" next to the question."""
+    return SUMMARY_INPUT.format(question=result.question, result=format_result(result, max_rows))
 
 
 class TextToSQLAgent:
@@ -139,8 +144,7 @@ class TextToSQLAgent:
         Best effort: if it fails, the user still gets the table and chart."""
         messages = [
             {"role": "system", "content": SUMMARY_PROMPT},
-            {"role": "user", "content": SUMMARY_INPUT.format(
-                question=result.question, result=format_result(result, self.SUMMARY_ROWS))},
+            {"role": "user", "content": summary_input(result, self.SUMMARY_ROWS)},
         ]
         t0 = time.perf_counter()
         try:

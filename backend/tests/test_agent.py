@@ -1,4 +1,4 @@
-from app.agent import AgentResult, TextToSQLAgent, format_result, load_glossary
+from app.agent import AgentResult, TextToSQLAgent, format_result, load_glossary, summary_input
 from app.llm import LLMOutputError, parse_llm_json
 
 import pytest
@@ -147,11 +147,11 @@ def test_summary_only_sees_first_rows(db, fake_llm):
     assert "cut off" in prompt and prompt.count("\n") < TextToSQLAgent.SUMMARY_ROWS + 10
 
 
-def test_summary_prompt_is_question_plus_format_result(db, fake_llm):
+def test_summary_prompt_is_summary_input(db, fake_llm):
     llm = fake_llm([{"sql": "SELECT order_id FROM orders", "explanation": "x"}, "ok"])
     res = make_agent(db, llm, summarize=True).ask("List orders")
-    expected = format_result(res, TextToSQLAgent.SUMMARY_ROWS)
-    assert llm.calls[1][-1]["content"] == f"Question: List orders\n\n{expected}"
+    assert llm.calls[1][-1]["content"] == summary_input(res, TextToSQLAgent.SUMMARY_ROWS)
+    assert summary_input(res, 50) == f"Question: List orders\n\n{format_result(res, 50)}"
 
 
 def test_format_result():

@@ -84,7 +84,8 @@ class FakeJudge:
         self.calls.append((question, answer, context))
         if self.error:
             raise self.error
-        return {"score": self.score, "faithful": self.score >= 1.0, "issues": self.issues, "cost_usd": 0.001}
+        return {"score": self.score, "faithful": self.score >= 1.0, "contradicted": self.score < 0.6,
+                "issues": self.issues, "cost_usd": 0.001}
 
 
 def run_judged(db, fake_llm, replies, judge):
@@ -102,10 +103,11 @@ ANSWERED = [
 def test_judge_sees_question_answer_and_the_rows_the_writer_saw(db, fake_llm):
     judge = FakeJudge(score=0.5, issues=["There are 40 pizza types. -> no: the result shows 32."])
     rows = run_judged(db, fake_llm, ANSWERED, judge)
-    assert judge.calls == [("How many pizza types?", "There are 40 pizza types.", "Result (1 rows):\nn\n32")]
+    context = "Question: How many pizza types?\n\nResult (1 rows):\nn\n32"   # what the writer saw
+    assert judge.calls == [("How many pizza types?", "There are 40 pizza types.", context)]
     assert rows[0]["correct"] is True and rows[0]["faithful"] is False   # right rows, wrong answer
     assert rows[0]["faithfulness"] == 0.5 and rows[0]["answer"] == "There are 40 pizza types."
-    assert rows[0]["faithfulness_issues"] == judge.issues
+    assert rows[0]["faithfulness_issues"] == judge.issues and rows[0]["contradicted"] is True
 
 
 def test_refusals_and_missing_answers_are_not_scored(db, fake_llm):
@@ -138,6 +140,7 @@ def _judged(scores: dict[str, float | None]) -> list[dict]:
     for r in rows:
         score = scores[r["id"]]
         r.update(answer="x", faithfulness=score, faithful=None if score is None else score >= 1.0,
+                 contradicted=None if score is None else score < 0.6,
                  faithfulness_issues=[], faithfulness_error=None, judge_cost_usd=0.001 if score is not None else 0.0)
     return rows
 
@@ -146,7 +149,7 @@ def test_summarize_run_faithfulness_mean_and_unfaithful_ids():
     s = summarize_run(_judged({"a": 1.0, "b": 0.5, "c": None, "d": 0.75}))
     assert s["faithfulness_scored"] == 3 and s["faithfulness_not_scored"] == 1
     assert s["faithfulness_mean"] == 0.75                      # (1 + 0.5 + 0.75) / 3; "c" is left out
-    assert s["unfaithful_ids"] == ["b", "d"] and s["judge_cost_usd"] == 0.003
+    assert s["unfaithful_ids"] == ["b", "d"] and s["contradicted_ids"] == ["b"] and s["judge_cost_usd"] == 0.003
     assert s["execution_accuracy"] == 100.0                    # accuracy fields untouched
 
 
@@ -191,10 +194,12 @@ def test_faithfulness_judge_config_and_issues(monkeypatch):
 
     monkeypatch.setattr(faithfulness, "FaithfulnessMetric", FakeMetric)
     out = faithfulness.FaithfulnessJudge()("How did revenue change?", "Revenue rose to $64,701.15.", "ROWS")
-    assert out == {"score": 0.5, "faithful": False, "issues": ["Revenue rose. -> no: It fell."], "cost_usd": 0.0002}
+    assert out == {"score": 0.5, "faithful": False, "contradicted": True,
+                   "issues": ["Revenue rose. -> no: It fell."], "cost_usd": 0.0002}
     kw = made[0].kw
     assert kw["model"] == "gpt-4o-mini" and kw["threshold"] == 1.0
     assert kw["penalize_ambiguous_claims"] is True and kw["include_reason"] is False
     tc = made[0].test_case
     assert (tc.input, tc.actual_output, tc.retrieval_context) == (
         "How did revenue change?", "Revenue rose to $64,701.15.", ["ROWS"])
+

@@ -15,7 +15,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from app.agent import TextToSQLAgent, format_result
+from app.agent import TextToSQLAgent, summary_input
 from app.config import settings
 from app.db import Database
 from app.llm import OpenAIClient
@@ -32,16 +32,16 @@ def gold_is_ordered(sql: str) -> bool:
 def score_answer(judge, res, max_rows: int) -> dict:
     """Faithfulness fields for one report row. Only answers to queries that ran are scored;
     no answer (refusal, failure, summary call failed) is "not scored", never "unfaithful"."""
-    out = {"answer": res.answer, "faithfulness": None, "faithful": None, "faithfulness_issues": [],
+    out = {"answer": res.answer, "faithfulness": None, "faithful": None, "contradicted": None, "faithfulness_issues": [],
            "faithfulness_error": None, "judge_cost_usd": 0.0}
     if res.status != "ok" or not res.answer:
         return out
     try:  # a judge outage shouldn't throw away the accuracy results of the whole run
-        verdict = judge(res.question, res.answer, format_result(res, max_rows))
+        verdict = judge(res.question, res.answer, summary_input(res, max_rows))
     except Exception as e:
         out["faithfulness_error"] = f"{type(e).__name__}: {e}"
         return out
-    out.update(faithfulness=verdict["score"], faithful=verdict["faithful"],
+    out.update(faithfulness=verdict["score"], faithful=verdict["faithful"], contradicted=verdict["contradicted"],
                faithfulness_issues=verdict["issues"], judge_cost_usd=verdict["cost_usd"])
     return out
 
@@ -109,6 +109,7 @@ def summarize_faithfulness(rows_out: list[dict]) -> dict:
         "faithfulness_not_scored": len(rows_out) - len(scored),
         "faithfulness_mean": round(statistics.mean(r["faithfulness"] for r in scored), 3) if scored else None,
         "unfaithful_ids": [r["id"] for r in scored if not r["faithful"]],
+        "contradicted_ids": [r["id"] for r in scored if r["contradicted"]],  # the subset that states something false
         "judge_error_ids": [r["id"] for r in rows_out if r["faithfulness_error"]],
         "judge_cost_usd": round(sum(r["judge_cost_usd"] for r in rows_out), 4),
     }
