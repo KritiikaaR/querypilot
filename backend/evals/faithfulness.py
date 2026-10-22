@@ -11,11 +11,11 @@ from deepeval.metrics import FaithfulnessMetric  # noqa: E402
 from deepeval.metrics.base_metric import Verdict  # noqa: E402
 from deepeval.test_case import LLMTestCase  # noqa: E402
 
-JUDGE_MODEL = "gpt-4o-mini"
+JUDGE_MODEL = "gpt-4o-mini"  # cheap default; gpt-4o agrees with hand labels more often (see README)
 
 
 class FaithfulnessJudge:
-    """judge(question, answer, context) -> {"score", "faithful", "issues", "cost_usd"}.
+    """judge(question, answer, context) -> {"score", "faithful", "contradicted", "issues", "cost_usd"}.
 
     - penalize_ambiguous_claims: deepeval rates a claim the context neither supports nor
       contradicts as "borderline" and passes it by default. An answer about query results
@@ -38,4 +38,5 @@ class FaithfulnessJudge:
         issues = [f"{claims[i]} -> {v.verdict}: {v.reason}" if paired else f"{v.verdict}: {v.reason}"
                   for i, v in enumerate(verdicts) if v.verdict != Verdict.YES]
         return {"score": round(metric.score, 3), "faithful": metric.score >= self.threshold,
+                "contradicted": any(v.verdict == Verdict.NO for v in verdicts),  # vs. only vague/unsupported
                 "issues": issues, "cost_usd": metric.evaluation_cost or 0.0}
