@@ -58,6 +58,15 @@ class AgentResult:
         return asdict(self)
 
 
+def format_result(result: AgentResult, max_rows: int) -> str:
+    """The result as the answer writer sees it: a header line and the first max_rows rows.
+    The faithfulness eval gives its judge this same text, so both see the same evidence."""
+    shown = result.rows[:max_rows]
+    table = "\n".join([" | ".join(result.columns)] + [" | ".join(str(v) for v in r) for r in shown])
+    cut = ", cut off" if result.truncated or len(result.rows) > len(shown) else ""
+    return f"Result ({len(shown)} rows{cut}):\n{table or '(no rows)'}"
+
+
 class TextToSQLAgent:
     SUMMARY_ROWS = 50  # rows shown to the model when writing the plain-English answer
 
@@ -128,13 +137,10 @@ class TextToSQLAgent:
     def _add_answer(self, result: AgentResult) -> None:
         """Second, small LLM call: turn the result table into a plain-English answer.
         Best effort: if it fails, the user still gets the table and chart."""
-        shown = result.rows[: self.SUMMARY_ROWS]
-        table = "\n".join([" | ".join(result.columns)] + [" | ".join(str(v) for v in r) for r in shown])
-        cut = ", cut off" if result.truncated or len(result.rows) > len(shown) else ""
         messages = [
             {"role": "system", "content": SUMMARY_PROMPT},
             {"role": "user", "content": SUMMARY_INPUT.format(
-                question=result.question, row_count=len(shown), truncated=cut, table=table or "(no rows)")},
+                question=result.question, result=format_result(result, self.SUMMARY_ROWS))},
         ]
         t0 = time.perf_counter()
         try:

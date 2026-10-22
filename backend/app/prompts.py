@@ -51,5 +51,4 @@ Reply with the sentences only."""
 
 SUMMARY_INPUT = """Question: {question}
 
-Result ({row_count} rows{truncated}):
-{table}"""
+{result}"""

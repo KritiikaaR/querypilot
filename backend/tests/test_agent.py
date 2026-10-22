@@ -1,4 +1,4 @@
-from app.agent import TextToSQLAgent, load_glossary
+from app.agent import AgentResult, TextToSQLAgent, format_result, load_glossary
 from app.llm import LLMOutputError, parse_llm_json
 
 import pytest
@@ -145,6 +145,23 @@ def test_summary_only_sees_first_rows(db, fake_llm):
     make_agent(db, llm, summarize=True).ask("List orders")
     prompt = llm.calls[1][-1]["content"]
     assert "cut off" in prompt and prompt.count("\n") < TextToSQLAgent.SUMMARY_ROWS + 10
+
+
+def test_summary_prompt_is_question_plus_format_result(db, fake_llm):
+    llm = fake_llm([{"sql": "SELECT order_id FROM orders", "explanation": "x"}, "ok"])
+    res = make_agent(db, llm, summarize=True).ask("List orders")
+    expected = format_result(res, TextToSQLAgent.SUMMARY_ROWS)
+    assert llm.calls[1][-1]["content"] == f"Question: List orders\n\n{expected}"
+
+
+def test_format_result():
+    res = AgentResult(question="q", status="ok", columns=["month", "revenue"],
+                      rows=[["2015-01", 69793.3], ["2015-02", 65159.6], ["2015-03", 70397.1]])
+    assert format_result(res, 50) == "Result (3 rows):\nmonth | revenue\n2015-01 | 69793.3\n2015-02 | 65159.6\n2015-03 | 70397.1"
+    assert format_result(res, 2).startswith("Result (2 rows, cut off):") and "2015-03" not in format_result(res, 2)
+    res.truncated = True
+    assert format_result(res, 50).startswith("Result (3 rows, cut off):")
+    assert format_result(AgentResult(question="q", status="ok"), 50) == "Result (0 rows):\n(no rows)"
 
 
 def system_prompt(db, fake_llm, **kw) -> str:
