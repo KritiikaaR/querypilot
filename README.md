@@ -33,6 +33,21 @@ cd backend
 python -m evals.run_eval --repeat 3
 ```
 
+### Are the plain-English answers right?
+
+Execution accuracy only checks the rows. The answer the app writes from them could still say the wrong thing, so `--faithfulness` also writes each answer and has an LLM judge ([deepeval](https://github.com/confident-ai/deepeval)'s `FaithfulnessMetric`) check every claim in it against the question and the rows the answer writer saw:
+
+```bash
+python -m evals.run_eval --faithfulness                         # judge: gpt-4o-mini (~$0.01 for all 30)
+python -m evals.run_eval --faithfulness --judge-model gpt-4o    # stricter judge (~$0.12)
+```
+
+Each report row gets the answer, a score from 0 to 1 and the judge's reason for every claim it rejected. The summary adds the mean score and `unfaithful_ids` (any claim the rows don't support) and `contradicted_ids` (a claim the rows contradict). Refusals and failed queries have no answer and aren't scored.
+
+It found a real bug the accuracy number can't see: for "Which pizzas contain mushrooms?" the query returns all 7 right pizzas, and the answer says only one of them has mushrooms (the one with "Mushroom" in its name). Both judges flag it in every run.
+
+How far to trust the judge: on 28 answers I labeled by hand (2 unfaithful), gpt-4o caught both with 0 to 1 false alarms per run. gpt-4o-mini caught 1 or 2 with 2 to 6 false alarms, and its results change from run to run on the same answers. Use mini for a cheap check and gpt-4o when the number matters.
+
 ## Safety
 
 The model writes SQL, so it shouldn't be able to break anything. Several layers make sure it can't:
